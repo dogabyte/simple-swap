@@ -1,27 +1,24 @@
-# simple-swap
+# 🧪 Final Project Module 3: Implementation of SimpleSwap
 
+## 🎯 Objective
 
-# 🧪 Trabajo Final Módulo 3: Implementación de SimpleSwap
+Create a smart contract called `SimpleSwap` that allows users to:
+- Add and remove liquidity.
+- Swap tokens.
+- Get prices and calculate output amounts.
 
-## 🎯 Objetivo
-
-Crear un contrato inteligente llamado `SimpleSwap` que permita:
-- Agregar y remover liquidez.
-- Intercambiar tokens.
-- Obtener precios y calcular cantidades a recibir.
-
-El contrato replicará la funcionalidad básica de Uniswap **sin depender de su protocolo**.
+The contract replicates the basic functionality of Uniswap **without relying on its protocol**.
 
 ---
 
-## 📢 Requerimientos
+## 📢 Requirements
 
-### 1️⃣ Agregar Liquidez (`addLiquidity`)
+### 1️⃣ Add Liquidity (`addLiquidity`)
 
-**Descripción:**  
-Permite a los usuarios agregar liquidez a un par de tokens en un pool ERC-20.
+**Description:**  
+Allows users to add liquidity to a token pair in an ERC-20 pool.
 
-**Interfaz:**
+**Interface:**
 ```solidity
 function addLiquidity(
     address tokenA,
@@ -35,29 +32,29 @@ function addLiquidity(
 ) external returns (uint amountA, uint amountB, uint liquidity);
 ```
 
-**Tareas:**
-- Transferir tokens del usuario al contrato.
-- Calcular y asignar liquidez según las reservas.
-- Emitir tokens de liquidez al usuario.
+**Tasks:**
+- Transfer tokens from the user to the contract.
+- Calculate and assign liquidity according to reserves.
+- Mint liquidity tokens to the user.
 
-**Parámetros:**
-- `tokenA`, `tokenB`: Direcciones de los tokens.
-- `amountADesired`, `amountBDesired`: Cantidades deseadas de tokens.
-- `amountAMin`, `amountBMin`: Mínimos aceptables.
-- `to`: Dirección del destinatario.
-- `deadline`: Límite de tiempo para la transacción.
+**Parameters:**
+- `tokenA`, `tokenB`: Token addresses.
+- `amountADesired`, `amountBDesired`: Desired token amounts.
+- `amountAMin`, `amountBMin`: Minimum acceptable amounts.
+- `to`: Recipient address.
+- `deadline`: Transaction deadline.
 
-**Retornos:**
-- `amountA`, `amountB`, `liquidity`: Cantidades efectivas y liquidez emitida.
+**Returns:**
+- `amountA`, `amountB`, `liquidity`: Actual amounts and liquidity minted.
 
 ---
 
-### 2️⃣ Remover Liquidez (`removeLiquidity`)
+### 2️⃣ Remove Liquidity (`removeLiquidity`)
 
-**Descripción:**  
-Permite a los usuarios retirar liquidez de un pool ERC-20.
+**Description:**  
+Allows users to withdraw liquidity from an ERC-20 pool.
 
-**Interfaz:**
+**Interface:**
 ```solidity
 function removeLiquidity(
     address tokenA,
@@ -70,28 +67,28 @@ function removeLiquidity(
 ) external returns (uint amountA, uint amountB);
 ```
 
-**Tareas:**
-- Quemar tokens de liquidez del usuario.
-- Calcular y retornar tokens A y B.
+**Tasks:**
+- Burn the user’s liquidity tokens.
+- Calculate and return token A and B amounts.
 
-**Parámetros:**
-- `tokenA`, `tokenB`: Direcciones de los tokens.
-- `liquidity`: Cantidad de tokens de liquidez a retirar.
-- `amountAMin`, `amountBMin`: Mínimos aceptables.
-- `to`: Dirección del destinatario.
-- `deadline`: Límite de tiempo para la transacción.
+**Parameters:**
+- `tokenA`, `tokenB`: Token addresses.
+- `liquidity`: Amount of liquidity tokens to remove.
+- `amountAMin`, `amountBMin`: Minimum acceptable amounts.
+- `to`: Recipient address.
+- `deadline`: Transaction deadline.
 
-**Retornos:**
-- `amountA`, `amountB`: Cantidades recibidas tras retirar liquidez.
+**Returns:**
+- `amountA`, `amountB`: Amounts received after liquidity removal.
 
 ---
 
-### 3️⃣ Intercambiar Tokens (`swapExactTokensForTokens`)
+### 3️⃣ Swap Tokens (`swapExactTokensForTokens`)
 
-**Descripción:**  
-Permite intercambiar una cantidad exacta de un token por otro.
+**Description:**  
+Allows swapping an exact amount of one token for as many output tokens as possible.
 
-**Interfaz:**
+**Interface:**
 ```solidity
 function swapExactTokensForTokens(
     uint amountIn,
@@ -102,29 +99,29 @@ function swapExactTokensForTokens(
 ) external returns (uint[] memory amounts);
 ```
 
-**Tareas:**
-- Transferir token de entrada del usuario al contrato.
-- Calcular el intercambio según reservas.
-- Transferir token de salida al usuario.
+**Tasks:**
+- Transfer input tokens from the user to the contract.
+- Calculate the swap according to reserves.
+- Transfer output tokens to the user.
 
-**Parámetros:**
-- `amountIn`: Cantidad de tokens de entrada.
-- `amountOutMin`: Mínimo aceptable de tokens de salida.
-- `path`: Array de direcciones de tokens (entrada → salida).
-- `to`: Dirección del destinatario.
-- `deadline`: Límite de tiempo para la transacción.
+**Parameters:**
+- `amountIn`: Input token amount.
+- `amountOutMin`: Minimum acceptable output amount.
+- `path`: Array of token addresses (input → output).
+- `to`: Recipient address.
+- `deadline`: Transaction deadline.
 
-**Retornos:**
-- `amounts`: Array con cantidades de entrada y salida.
+**Returns:**
+- `amounts`: Array with input and output amounts.
 
 ---
 
-### 4️⃣ Obtener el Precio (`getPrice`)
+### 4️⃣ Get Price (`getPrice`)
 
-**Descripción:**  
-Obtiene el precio de un token en términos de otro.
+**Description:**  
+Gets the price of one token in terms of another.
 
-**Interfaz:**
+**Interface:**
 ```solidity
 function getPrice(
     address tokenA,
@@ -132,24 +129,24 @@ function getPrice(
 ) external view returns (uint price);
 ```
 
-**Tareas:**
-- Obtener reservas de ambos tokens.
-- Calcular y retornar el precio.
+**Tasks:**
+- Retrieve the reserves of both tokens.
+- Calculate and return the price.
 
-**Parámetros:**
-- `tokenA`, `tokenB`: Direcciones de los tokens.
+**Parameters:**
+- `tokenA`, `tokenB`: Token addresses.
 
-**Retorno:**
-- `price`: Precio de `tokenA` en términos de `tokenB`.
+**Return:**
+- `price`: Price of `tokenA` denominated in `tokenB`.
 
 ---
 
-### 5️⃣ Calcular Cantidad a Recibir (`getAmountOut`)
+### 5️⃣ Calculate Output Amount (`getAmountOut`)
 
-**Descripción:**  
-Calcula cuántos tokens se recibirán al realizar un intercambio.
+**Description:**  
+Calculates how many output tokens will be received for a swap.
 
-**Interfaz:**
+**Interface:**
 ```solidity
 function getAmountOut(
     uint amountIn,
@@ -158,14 +155,14 @@ function getAmountOut(
 ) external pure returns (uint amountOut);
 ```
 
-**Tareas:**
-- Calcular y retornar la cantidad de salida.
+**Tasks:**
+- Calculate and return the output amount.
 
-**Parámetros:**
-- `amountIn`: Cantidad de tokens de entrada.
-- `reserveIn`, `reserveOut`: Reservas actuales del contrato.
+**Parameters:**
+- `amountIn`: Input token amount.
+- `reserveIn`, `reserveOut`: Current reserves in the contract.
 
-**Retorno:**
-- `amountOut`: Cantidad de tokens de salida.
+**Return:**
+- `amountOut`: Output token amount.
 
 ---
