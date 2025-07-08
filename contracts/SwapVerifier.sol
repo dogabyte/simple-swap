@@ -1,4 +1,8 @@
 /**
+ *Submitted for verification at Etherscan.io on 2025-06-19
+*/
+
+/**
  *Submitted for verification at Etherscan.io on 2025-06-17
 */
 
@@ -110,7 +114,7 @@ interface ISimpleSwap {
     ) external;
 
     function getPrice(address tokenA, address tokenB) external view returns (uint256 price);
-    function getAmountOut(address tokenIn, address tokenOut, uint256 amountIn) external view returns (uint256);
+    function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut) external view returns (uint256);
 }
 
 /**
@@ -158,7 +162,7 @@ contract SwapVerifier {
         require(price == (bAdded * 1e18) / aAdded, "getPrice incorrect");
 
         // Compute expected output for swap
-        uint256 expectedOut = ISimpleSwap(swapContract).getAmountOut(tokenA, tokenB, amountIn);
+        uint256 expectedOut = ISimpleSwap(swapContract).getAmountOut(amountIn, aAdded, bAdded);
         // Perform swap
         IERC20(tokenA).approve(swapContract, amountIn);
         address[] memory path = new address[](2);
