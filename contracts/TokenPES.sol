@@ -17,7 +17,7 @@ contract MyToken is ERC20{
  * @dev Mints 1000 tokens adjusted by the token's decimals.
  */
     {
-        _mint(msg.sender, 1000 * 10 ** decimals());
+        _mint(msg.sender, 1000 * 10 ** decimals());q
     
 }
 }
