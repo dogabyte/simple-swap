@@ -3,6 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract SimpleSwap is ERC20 {
@@ -17,6 +18,7 @@ contract SimpleSwap is ERC20 {
      * @param amountB Amount of token B added.
      * @param liquidity Amount of liquidity tokens minted.
      */
+
     event LiquidityAdded(
         address indexed provider,
         address tokenA,
@@ -35,6 +37,7 @@ contract SimpleSwap is ERC20 {
      * @param amountB Amount of token B returned.
      * @param liquidity Amount of liquidity tokens burned.
      */
+
     event LiquidityRemoved(
         address indexed provider,
         address tokenA,
@@ -53,6 +56,7 @@ contract SimpleSwap is ERC20 {
      * @param amountOut Amount of output token received.
      * @param recipient Address receiving the output tokens.
      */
+
     event TokenSwapped(
         address indexed sender,
         address tokenIn,
@@ -67,6 +71,7 @@ contract SimpleSwap is ERC20 {
      * @param requested The minimum amount requested or expected.
      * @param available The actual available or provided amount.
      */
+
     error InsufficientAmount(uint256 requested, uint256 available);
 
     /**
@@ -147,32 +152,37 @@ contract SimpleSwap is ERC20 {
         address to,
         uint256 deadline
     ) external returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
+        require(block.timestamp <= deadline, "DEADLINE_EXPIRED");
         address _tokenA = tokenA;
         address _tokenB = tokenB;
 
-        require(block.timestamp <= deadline, "DEADLINE_EXPIRED");
+        uint256 reserveA = ERC20(_tokenA).balanceOf(address(this));
+        uint256 reserveB = ERC20(_tokenB).balanceOf(address(this));
 
-        (amountA, amountB) = getAmounts(
-            amountADesired,
-            amountBDesired,
-            amountAMin,
-            amountBMin,
-            _tokenA,
-            _tokenB
-        );
+        if (totalSupply() == 0) {
+            amountA = amountADesired;
+            amountB = amountBDesired;
+            liquidity = Math.sqrt(amountA * amountB);
+        } else {
+            uint256 inputRatioA = (amountADesired * 1e18) / reserveA;
+            uint256 inputRatioB = (amountBDesired * 1e18) / reserveB;
 
-        uint256 reserveA = ERC20(tokenA).balanceOf(address(this));
-        uint256 reserveB = ERC20(tokenB).balanceOf(address(this));
-        uint256 totalLiquidity = totalSupply();
-
-        (liquidity) = getLiquidity(
-            amountA,
-            amountB,
-            reserveA,
-            reserveB,
-            totalLiquidity
-        );
-        if (liquidity == 0) revert ZeroLiquidity();
+            if (inputRatioA < inputRatioB) {
+                amountA = amountADesired;
+                amountB = (getPrice(_tokenA, _tokenB) * amountA) / 1e18;
+                if (amountA < amountAMin)
+                    revert InsufficientAmount(amountAMin, amountA);
+            } else {
+                amountB = amountBDesired;
+                amountA = getPrice(_tokenB, _tokenA) * amountB;
+                if (amountB < amountBMin)
+                    revert InsufficientAmount(amountBMin, amountB);
+            }
+            liquidity = Math.min(
+                (amountA * totalSupply()) / reserveA,
+                (amountB * totalSupply()) / reserveB
+            );
+        }
 
         ERC20(_tokenA).transferFrom(msg.sender, address(this), amountA);
         ERC20(_tokenB).transferFrom(msg.sender, address(this), amountB);
@@ -223,14 +233,13 @@ contract SimpleSwap is ERC20 {
         amountA = (liquidity * balanceA) / totalLiquidity;
         amountB = (liquidity * balanceB) / totalLiquidity;
 
-        ERC20(tokenA).transfer(to, amountA);
-        ERC20(tokenB).transfer(to, amountB);
-
-        if (amountA == 0 || amountB == 0) revert ZeroLiquidity();
         if (amountA < amountAMin)
             revert InsufficientAmount(amountAMin, amountA);
         if (amountB < amountBMin)
             revert InsufficientAmount(amountBMin, amountB);
+
+        ERC20(tokenA).transfer(to, amountA);
+        ERC20(tokenB).transfer(to, amountB);
 
         _burn(msg.sender, liquidity);
         emit LiquidityRemoved(
@@ -247,7 +256,7 @@ contract SimpleSwap is ERC20 {
 
     /**
      * @notice Swaps an exact amount of input tokens for as many output tokens as possible,
-     *         following the path of token addresses.
+     * following the path of token addresses.
      * @param amountIn The exact amount of input tokens to swap.
      * @param amountOutMin The minimum amount of output tokens that must be received for the transaction not to revert.
      * @param path An array of token addresses representing the swap path. Must have length 2.
@@ -270,12 +279,12 @@ contract SimpleSwap is ERC20 {
         address tokenA = path[0];
         address tokenB = path[1];
 
+        uint256 reserveA = ERC20(tokenA).balanceOf(address(this));
+        uint256 reserveB = ERC20(tokenB).balanceOf(address(this));
+
         if (!ERC20(tokenA).transferFrom(msg.sender, address(this), amountIn)) {
             revert TransferFailed(tokenA, msg.sender, address(this), amountIn);
         }
-
-        uint256 reserveA = ERC20(tokenA).balanceOf(address(this)) - amountIn;
-        uint256 reserveB = ERC20(tokenB).balanceOf(address(this));
 
         uint256 amountOut = getAmountOut(amountIn, reserveA, reserveB);
         if (amountOut < amountOutMin) {
@@ -307,9 +316,11 @@ contract SimpleSwap is ERC20 {
         address tokenA,
         address tokenB
     ) public view returns (uint256 price) {
-        uint256 amountA = ERC20(tokenA).balanceOf(address(this));
-        uint256 amountB = ERC20(tokenB).balanceOf(address(this));
-        price = (amountB * 1e18) / amountA;
+        uint256 reserveA = ERC20(tokenA).balanceOf(address(this));
+        uint256 reserveB = ERC20(tokenB).balanceOf(address(this));
+        if (reserveA == 0 || reserveB == 0) revert ZeroLiquidity();
+
+        price = (reserveB * 1e18) / reserveA;
     }
 
     /**
@@ -328,97 +339,5 @@ contract SimpleSwap is ERC20 {
         if (amountIn == 0) revert InsufficientAmount(0, amountIn);
 
         amountOut = (amountIn * reserveOut) / (reserveIn + amountIn);
-    }
-
-    /**
-     * @notice Calculates the amount of liquidity tokens to mint.
-     * @dev If this is the first liquidity provision, uses a simple average formula;
-     * otherwise, calculates proportionally based on reserves.
-     * @param amountA The amount of token A provided.
-     * @param amountB The amount of token B provided.
-     * @param reserveA Current reserve of token A (0 if it's the initial deposit).
-     * @param reserveB Current reserve of token B (0 if it's the initial deposit).
-     * @param totalLiquidity The total amount of liquidity tokens currently minted.
-     * @return liquidity The amount of liquidity tokens to mint.
-     */
-
-    function getLiquidity(
-        uint256 amountA,
-        uint256 amountB,
-        uint256 reserveA,
-        uint256 reserveB,
-        uint256 totalLiquidity
-    ) internal pure returns (uint256 liquidity) {
-        if (totalLiquidity == 0) {
-            liquidity = (amountA + amountB) / 2;
-        } else {
-            if (reserveA == 0 || reserveB == 0) revert ZeroLiquidity();
-            uint256 liquidityA = (amountA * totalLiquidity) / reserveA;
-            uint256 liquidityB = (amountB * totalLiquidity) / reserveB;
-            liquidity = Math.min(liquidityA, liquidityB);
-        }
-    }
-
-    /**
-     * @notice Calculates the optimal amounts of token A and token B to be added as liquidity,
-     * while respecting the current pool reserves and the minimum constraints.
-     * @dev Returns the adjusted amounts of tokenA and E to preserve the pool ratio.
-     * Reverts if neither amount meets the minimum required.
-     * @param amountADesired The desired amount of token A to add.
-     * @param amountBDesired The desired amount of token B to add.
-     * @param amountAMin The minimum amount of token A to accept (to prevent slippage).
-     * @param amountBMin The minimum amount of token B to accept (to prevent slippage).
-     * @return amountA The final amount of token A to add.
-     * @return amountB The final amount of token B to add.
-     */
-
-    function getAmounts(
-        uint256 amountADesired,
-        uint256 amountBDesired,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        address tokenA,
-        address tokenB
-    ) internal view returns (uint256 amountA, uint256 amountB) {
-        uint256 reserveA = ERC20(tokenA).balanceOf(address(this));
-        uint256 reserveB = ERC20(tokenB).balanceOf(address(this));
-
-        if (reserveA == 0 && reserveB == 0) {
-            amountA = amountADesired;
-            amountB = amountBDesired;
-
-            if (amountA < amountAMin)
-                revert InsufficientAmount(amountAMin, amountA);
-            if (amountB < amountBMin)
-                revert InsufficientAmount(amountBMin, amountB);
-            return (amountA, amountB);
-        }
-
-        uint256 ratioA = (amountADesired * 1e18) / reserveA;
-        uint256 ratioB = (amountBDesired * 1e18) / reserveB;
-
-        if (ratioA > ratioB) {
-            amountA = amountADesired;
-            amountB = (getPrice(tokenA, tokenB) * amountA) / 1e18;
-            if (amountB < amountBMin) {
-                revert InsufficientAmount({
-                    requested: amountBMin,
-                    available: amountB
-                });
-            }
-        } else if (ratioA < ratioB) {
-            amountB = amountBDesired;
-            amountA = (getPrice(tokenB, tokenA) * amountB) / 1e18;
-            if (amountA < amountAMin) {
-                revert InsufficientAmount({
-                    requested: amountAMin,
-                    available: amountA
-                });
-            }
-        } else if (ratioA == ratioB) {
-            amountA = amountADesired;
-            amountB = amountBDesired;
-        }
-        return (amountA, amountB);
     }
 }
